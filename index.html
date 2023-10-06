@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        circle { 
+            opacity: 0.3; 
+        }
+        .tooltip {
+            position: absolute;
+            background-color: white;
+            border: 1px solid black;
+            padding: 10px;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Spotify Tracks Data Visualization</h1>
+    <div class="tooltip"></div>
+
+    <!-- Popularity vs Danceability -->
+    <h2>Popularity vs Danceability</h2>
+    <svg id="scatter-plot-popularity-danceability" width="800" height="600"></svg>
+    
+    <!-- Energy vs Danceability -->
+    <h2>Energy vs Danceability</h2>
+    <svg id="scatter-plot-energy-danceability" width="800" height="600"></svg>
+
+    <!-- Tempo vs Danceability -->
+    <h2>Tempo vs Danceability</h2>
+    <svg id="scatter-plot-tempo-danceability" width="800" height="600"></svg>
+
+    <!-- Loudness vs Energy -->
+    <h2>Loudness vs Energy</h2>
+    <svg id="scatter-plot-loudness-energy" width="800" height="600"></svg>
+
+    <script>
+    
+    function addAxesLabels(svgID, xLabel, yLabel) {
+        const svg = d3.select(svgID);
+        const width = 800;
+        const height = 600;
+        const margin = {top: 40, right: 40, bottom: 40, left: 40};
+
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", height - margin.bottom + 30)
+            .attr("text-anchor", "middle")
+            .text(xLabel);
+
+        svg.append("text")
+            .attr("x", - (height / 2))
+            .attr("y", margin.left - 30)
+            .attr("text-anchor", "middle")
+            .attr("transform", "rotate(-90)")
+            .text(yLabel);
+    }
+
+    function addLegend(svgID, data, colorScale) {
+        const svg = d3.select(svgID);
+        const genres = Array.from(new Set(data.map(d => d.track_genre)));
+
+        let legend = svg.append("g")
+            .attr("id", "legend")
+            .attr("transform", "translate(650,50)");
+
+        genres.forEach(function(genre, i) {
+            legend.append("rect")
+                .attr("x", 0)
+                .attr("y", i * 20)
+                .attr("width", 10)
+                .attr("height", 10)
+                .attr("fill", colorScale(genre));
+
+            legend.append("text")
+                .attr("x", 20)
+                .attr("y", i * 20 + 9)
+                .text(genre)
+                .on("mouseover", function() { svg.selectAll("circle").style("opacity", d => d.genre === genre ? 1 : 0.1); });
+
+        });
+
+        legend.append("text")
+            .attr("x", 0)
+            .attr("y", genres.length * 20 + 9)
+            .text("Clear")
+            .on("mouseover", function() { svg.selectAll("circle").style("opacity", 0.7); });
+    }
+
+    function createScatterPlot(svgID, xAttribute, yAttribute, xLabel, yLabel, xRange, yRange, data) {
+        const svg = d3.select(svgID);
+        const margin = {top: 40, right: 40, bottom: 40, left: 40};
+        const width = 800;
+        const height = 600;
+
+        const xScale = d3.scaleLinear()
+            .domain(xRange) 
+            .range([margin.left, width - margin.right]);
+        const yScale = d3.scaleLinear()
+            .domain(yRange) 
+            .range([height - margin.bottom, margin.top]);
+        
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+        svg.append("g")
+            .attr("transform", `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(xScale));
+        svg.append("g")
+            .attr("transform", `translate(${margin.left},0)`)
+            .call(d3.axisLeft(yScale));
+
+        svg.selectAll("circle")
+            .data(data)
+            .enter().append("circle")
+            .attr("cx", d => xScale(d[xAttribute]))
+            .attr("cy", d => yScale(d[yAttribute]))
+            .attr("r", 5)
+            .attr("fill", d => colorScale(d.track_genre))
+            .on("mouseover", function(event, d) { 
+                d3.select(".tooltip")
+                    .style("left", `${event.pageX + 10}px`)
+                    .style("top", `${event.pageY + 10}px`)
+                    .html(`
+                        <strong>Track:</strong> ${d.track_name}<br>
+                        <strong>Artist:</strong> ${d.artists}<br>
+                        <img src="https://via.placeholder.com/50" alt="Album Thumbnail">
+                    `)
+                    .transition().duration(200)
+                    .style("opacity", 1);
+            })
+            .on("mouseout", function() {
+                d3.select(".tooltip")
+                    .transition().duration(200)
+                    .style("opacity", 0);
+            });
+
+        addAxesLabels(svgID, xLabel, yLabel);
+
+        addLegend(svgID, data, colorScale);
+    }
+
+    function categorizeGenre(specificGenre) {
+        const genreMapping = {
+            'acoustic': 'Acoustic',
+            'afrobeat': 'World',
+            'alt-rock': 'Rock',
+            'alternative': 'Rock',
+            'ambient': 'Electronic',
+            'anime': 'Other',
+            'black-metal': 'Metal',
+            'bluegrass': 'Folk',
+            'blues': 'Blues',
+            'bollywood': 'World',
+            'bossanova': 'World',
+            'brazil': 'World',
+            'breakbeat': 'Electronic',
+            'british': 'Rock',
+            'cantopop': 'World',
+            'chicago-house': 'Electronic',
+            'children': 'Other',
+            'chill': 'Electronic',
+            'classical': 'Classical',
+            'club': 'Electronic',
+            'comedy': 'Other',
+            'country': 'Country',
+            'dance': 'Electronic',
+            'dancehall': 'Reggae',
+            'death-metal': 'Metal',
+            'deep-house': 'Electronic',
+            'disco': 'Pop',
+            'disney': 'Other',
+            'drum-and-bass': 'Electronic',
+            'dub': 'Reggae',
+            'dubstep': 'Electronic',
+            'edm': 'Electronic',
+            'electro': 'Electronic',
+            'electronic': 'Electronic',
+            'emo': 'Rock',
+            'folk': 'Folk',
+            'forro': 'World',
+            'french': 'World',
+            'funk': 'Funk',
+            'garage': 'Rock',
+            'german': 'World',
+            'gospel': 'Gospel',
+            'goth': 'Rock',
+            'grindcore': 'Metal',
+            'groove': 'Funk',
+            'grunge': 'Rock',
+            'guitar': 'Instrumental',
+            'happy': 'Pop',
+            'hard-rock': 'Rock',
+            'hardcore': 'Metal',
+            'heavy-metal': 'Metal',
+            'hip-hop': 'Hip-Hop',
+            'holidays': 'Other',
+            'honky-tonk': 'Country',
+            'house': 'Electronic',
+            'idm': 'Electronic',
+            'indian': 'World',
+            'indie': 'Rock',
+            'indie-pop': 'Pop',
+            'industrial': 'Electronic',
+            'iranian': 'World',
+            'j-dance': 'World',
+            'j-idol': 'World',
+            'j-pop': 'World',
+            'j-rock': 'World',
+            'jazz': 'Jazz',
+            'k-pop': 'World',
+            'kids': 'Other',
+            'latin': 'World',
+            'malay': 'World',
+            'mandopop': 'World',
+            'metal': 'Metal',
+            'metal-misc': 'Metal',
+            'metalcore': 'Metal',
+            'minimal-techno': 'Electronic',
+            'movies': 'Other',
+            'mpb': 'World',
+            'new-age': 'Instrumental',
+            'new-release': 'Other',
+            'opera': 'Classical',
+            'pagode': 'World',
+            'party': 'Pop',
+            'philippines-opm': 'World',
+            'piano': 'Instrumental',
+            'pop': 'Pop',
+            'pop-film': 'Other',
+            'post-dubstep': 'Electronic',
+            'power-pop': 'Pop',
+            'progressive-house': 'Electronic',
+            'psych-rock': 'Rock',
+            'punk': 'Rock',
+            'punk-rock': 'Rock',
+            'r-n-b': 'R&B',
+            'rainy-day': 'Other',
+            'reggae': 'Reggae',
+            'reggaeton': 'Reggae',
+            'road-trip': 'Other',
+            'rock': 'Rock',
+            'rock-n-roll': 'Rock',
+            'rockabilly': 'Rock',
+            'romance': 'Other',
+            'sad': 'Other',
+            'salsa': 'World',
+            'samba': 'World',
+            'sertanejo': 'World',
+            'show-tunes': 'Other',
+            'singer-songwriter': 'Acoustic',
+            'ska': 'Reggae',
+            'sleep': 'Other',
+            'songwriter': 'Acoustic',
+            'soul': 'R&B',
+            'soundtracks': 'Other',
+            'spanish': 'World',
+            'study': 'Other',
+            'summer': 'Other',
+            'swedish': 'World',
+            'synth-pop': 'Pop',
+            'tango': 'World',
+            'techno': 'Electronic',
+            'trance': 'Electronic',
+            'trip-hop': 'Electronic',
+            'turkish': 'World',
+            'work-out': 'Other',
+            'world-music': 'World'
+        };
+
+        return genreMapping[specificGenre] || 'Other';
+        }
+
+
+    d3.csv("dataset.csv").then(function(data) {
+
+        const cleanedData = data.filter(d => d.artists !== null && d.album_name !== null && d.track_name !== null && d.popularity > 0);
+
+        cleanedData.forEach(d => {
+        d.track_genre = categorizeGenre(d.track_genre);
+        });
+        
+        // Function for stratified sampling
+        function stratifiedSample(data, genreKey, xAttributeKey, bucketSize, sampleSize) {
+            // Group data by genre and xAttribute
+            const groupedData = d3.group(data, d => d[genreKey], d => Math.floor(d[xAttributeKey]/bucketSize));
+            
+            let sampledData = [];
+            
+            groupedData.forEach((xAttributeMap, genre) => {
+                xAttributeMap.forEach((values, xAttributeRange) => {
+                    const sampledValues = d3.shuffle(values).slice(0, sampleSize);
+                    sampledData = sampledData.concat(sampledValues);
+                });
+            });
+            
+            return sampledData;
+        }
+
+        // Perform stratified sampling for each scatter plot
+        const sampleSize = 2;
+        const sampledDataPopularityDanceability = stratifiedSample(cleanedData, 'track_genre', 'popularity', 10, 3);
+        const sampledDataEnergyDanceability = stratifiedSample(cleanedData, 'track_genre', 'energy', 0.1, 3);
+        const sampledDataTempoDanceability = stratifiedSample(cleanedData, 'track_genre', 'tempo', 20, 3);
+        const sampledDataLoudnessEnergy = stratifiedSample(cleanedData, 'track_genre', 'loudness', 6, 3);
+
+        createScatterPlot("#scatter-plot-popularity-danceability", "popularity", "danceability", "Popularity", "Danceability", [0, 100], [0, 1], sampledDataPopularityDanceability);
+        createScatterPlot("#scatter-plot-energy-danceability", "energy", "danceability", "Energy", "Danceability", [0, 1], [0, 1], sampledDataEnergyDanceability);
+        createScatterPlot("#scatter-plot-tempo-danceability", "tempo", "danceability", "Tempo", "Danceability", [0, 250], [0, 1], sampledDataTempoDanceability);
+        createScatterPlot("#scatter-plot-loudness-energy", "loudness", "energy", "Loudness", "Energy", [-60, 0], [0, 1], sampledDataLoudnessEnergy);
+    });
+
+    </script>
+</body>
+</html>
